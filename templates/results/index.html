@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1>Enter Test Results</h1>
+    <p style="color: var(--text-light);">Select a patient to enter or update their test results.</p>
+</div>
+
+<div class="card">
+    {% if patients %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Lab No.</th>
+                    <th>Patient Name</th>
+                    <th>Tests Count</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in patients %}
+                <tr>
+                    <td><strong>{{ patient.lab_number }}</strong></td>
+                    <td>{{ patient.name }}</td>
+                    {% set active_tests = patient.tests | selectattr('status', 'ne', 'Cancelled') | list %}
+                    <td>{{ active_tests|length }}</td>
+                    <td>{{ patient.registration_date.strftime('%d %b %Y') }}</td>
+                    <td>
+                        {% set all_completed = True %}
+                        {% set has_active = False %}
+                        {% for pt in active_tests %}
+                            {% set has_active = True %}
+                            {% if pt.status != 'Completed' %}
+                                {% set all_completed = False %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if all_completed and has_active %}
+                            <span class="badge badge-completed">Completed</span>
+                        {% elif not has_active %}
+                            <span class="badge" style="background: #e2e8f0; color: #475569;">No Active Tests</span>
+                        {% else %}
+                            <span class="badge badge-pending">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('patient_receipt', patient_id=patient.id) }}" class="btn btn-warning btn-icon" title="View Receipt / Refund" style="background-color: #f59e0b; color: white;"><i class="fa-solid fa-receipt"></i></a>
+                        <a href="{{ url_for('patient_results', patient_id=patient.id) }}" class="btn btn-primary btn-icon" title="Enter Results"><i class="fa-solid fa-file-medical"></i></a>
+                        <a href="{{ url_for('patient_report', patient_id=patient.id) }}" class="btn btn-secondary btn-icon" title="View Report"><i class="fa-solid fa-file-pdf"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: var(--text-light); padding: 2rem 0;">No patients found.</p>
+    {% endif %}
+</div>
+{% endblock %}

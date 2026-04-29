@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1>Register New Patient</h1>
+    <p style="color: var(--text-light);">Enter patient details and select tests.</p>
+</div>
+
+<form method="POST" id="registrationForm">
+    <div class="grid-2">
+        <!-- Patient Details -->
+        <div class="card">
+            <h3 style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Patient Information</h3>
+            
+            <div class="form-group">
+                <label class="form-label" for="name">Full Name <span style="color: var(--danger);">*</span></label>
+                <input type="text" id="name" name="name" class="form-control" required>
+            </div>
+            
+            <div class="grid-2" style="gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="age">Age <span style="color: var(--danger);">*</span></label>
+                    <input type="number" id="age" name="age" class="form-control" min="0" max="150" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="gender">Gender <span style="color: var(--danger);">*</span></label>
+                    <select id="gender" name="gender" class="form-control" required>
+                        <option value="">Select...</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="contact">Contact Number</label>
+                <input type="text" id="contact" name="contact" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="referring_doctor">Referring Doctor <span style="color: var(--danger);">*</span></label>
+                <input type="text" id="referring_doctor" name="referring_doctor" class="form-control" value="Self" required>
+            </div>
+        </div>
+
+        <!-- Test Selection -->
+        <div class="card">
+            <h3 style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Select Tests</h3>
+            
+            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 1rem;">
+                {% if tests %}
+                    {% for test in tests %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--secondary-color);">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; width: 100%;">
+                            <input type="checkbox" name="tests" value="{{ test.id }}" data-price="{{ test.price }}" class="test-checkbox" style="width: 18px; height: 18px;">
+                            <span>{{ test.name }}</span>
+                        </label>
+                        <span style="color: var(--text-light); font-weight: 500;">PKR {{ "%.2f"|format(test.price) }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: var(--text-light); text-align: center;">No tests available. Please ask admin to add tests.</p>
+                {% endif %}
+            </div>
+
+            <div style="background-color: var(--bg-light); padding: 1.5rem; border-radius: var(--border-radius); display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <span style="font-size: 1.125rem; font-weight: 600;">Total Amount:</span>
+                <span id="totalAmount" style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">PKR 0.00</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.125rem;"><i class="fa-solid fa-check"></i> Complete Registration & Bill</button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.test-checkbox');
+        const totalDisplay = document.getElementById('totalAmount');
+
+        function updateTotal() {
+            let total = 0;
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    total += parseFloat(cb.dataset.price);
+                }
+            });
+            totalDisplay.textContent = 'PKR ' + total.toFixed(2);
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateTotal);
+        });
+    });
+</script>
+{% endblock %}

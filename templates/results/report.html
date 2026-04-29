@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="no-print" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <a href="{{ url_for('results_list') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Back to List</a>
+        <a href="{{ url_for('patient_results', patient_id=patient.id) }}" class="btn btn-secondary" style="margin-left: 0.5rem;"><i class="fa-solid fa-pen"></i> Edit Results</a>
+    </div>
+    <button onclick="window.print()" class="btn btn-primary"><i class="fa-solid fa-print"></i> Print Report</button>
+</div>
+
+<div class="card report-container" style="max-width: 800px; margin: 0 auto; padding: 4rem 3rem; background: white; min-height: 1050px; border: 1px solid #ccc;">
+    <!-- Lab Header -->
+    <div style="text-align: center; border-bottom: 3px solid var(--primary-color); padding-bottom: 2rem; margin-bottom: 2rem;">
+        <h1 style="color: var(--primary-color); margin-bottom: 0.5rem; font-size: 2.5rem; font-weight: 700;">{{ lab_name }}</h1>
+        <p style="color: var(--text-light); font-size: 0.875rem;">{{ lab_address }} | Ph: {{ lab_contact }}</p>
+    </div>
+
+    <!-- Patient Details -->
+    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; margin-bottom: 2rem; line-height: 1.8;">
+        <div style="flex: 1;">
+            <p><strong>Patient Name:</strong> {{ patient.name }}</p>
+            <p><strong>Age / Gender:</strong> {{ patient.age }} Yrs / {{ patient.gender }}</p>
+            <p><strong>Ref. Doctor:</strong> Dr. {{ patient.referring_doctor }}</p>
+        </div>
+        <div style="flex: 1; text-align: right;">
+            <p><strong>Lab No:</strong> {{ patient.lab_number }}</p>
+            <p><strong>Reg. Date:</strong> {{ patient.registration_date.strftime('%d %b %Y, %I:%M %p') }}</p>
+            <p><strong>Report Date:</strong> {% set current_time = now if now else patient.registration_date %}{{ patient.registration_date.strftime('%d %b %Y') }}</p>
+        </div>
+    </div>
+
+    <h2 style="text-align: center; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 2px; font-size: 1.25rem;">Laboratory Report</h2>
+
+    <!-- Results Table -->
+    {% for test_data in report_data %}
+        <div style="margin-bottom: 3rem;">
+            <h3 style="background-color: var(--secondary-color); padding: 0.5rem 1rem; border-left: 4px solid var(--primary-color); margin-bottom: 1rem; font-size: 1.125rem;">{{ test_data.test_name }}</h3>
+            
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--text-dark);">
+                        <th style="text-align: left; padding: 0.5rem 0; color: var(--text-dark);">Investigation</th>
+                        <th style="text-align: center; padding: 0.5rem 0; color: var(--text-dark);">Result</th>
+                        <th style="text-align: left; padding: 0.5rem 0; color: var(--text-dark);">Unit</th>
+                        <th style="text-align: left; padding: 0.5rem 0; color: var(--text-dark);">Reference Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for param in test_data.results %}
+                    <tr style="border-bottom: 1px dashed var(--border-color);">
+                        <td style="padding: 0.75rem 0;">{{ param.parameter_name }}</td>
+                        <td style="text-align: center; padding: 0.75rem 0;">
+                            {% if param.is_abnormal %}
+                                <strong style="color: var(--danger); font-size: 1.125rem;">{{ param.result_value }}</strong> *
+                            {% else %}
+                                <strong>{{ param.result_value }}</strong>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.75rem 0; color: var(--text-light);">{{ param.unit }}</td>
+                        <td style="padding: 0.75rem 0; color: var(--text-light);">{{ param.normal_range }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endfor %}
+
+    <!-- Report Footer -->
+    <div style="margin-top: 6rem; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div style="text-align: center; color: var(--text-light); font-size: 0.875rem;">
+            <p>*** End of Report ***</p>
+            <p style="margin-top: 0.5rem; font-size: 0.75rem;">This is an electronically generated report.</p>
+        </div>
+        <div style="text-align: center;">
+            <div style="border-bottom: 1px solid var(--text-dark); width: 150px; margin-bottom: 0.5rem;"></div>
+            <p style="font-weight: 600;">Lab Incharge / Pathologist</p>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    body {
+        background: white;
+    }
+    .main-content {
+        background: white;
+    }
+    .report-container {
+        border: none !important;
+        padding: 0 !important;
+    }
+}
+</style>
+{% endblock %}

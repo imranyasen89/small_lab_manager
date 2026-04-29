@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-header" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h1>Dashboard</h1>
+        <p style="color: var(--text-light);">Welcome to {{ lab_name }} management system.</p>
+    </div>
+    <div>
+        <form method="GET" action="{{ url_for('dashboard') }}" style="display: flex; gap: 0.5rem; align-items: center;">
+            <label for="date_filter" style="color: var(--text-dark); font-weight: bold;">Date:</label>
+            <input type="date" id="date_filter" name="date" value="{{ selected_date }}" class="form-control" style="padding: 0.5rem;">
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </form>
+    </div>
+</div>
+
+<div class="dashboard-stats">
+    <div class="stat-card">
+        <div class="stat-icon primary">
+            <i class="fa-solid fa-users"></i>
+        </div>
+        <div class="stat-details">
+            <h3>Patients Today</h3>
+            <p id="patientsStat">{{ total_patients_today }}</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon warning">
+            <i class="fa-solid fa-vials"></i>
+        </div>
+        <div class="stat-details">
+            <h3>Tests Performed Today</h3>
+            <p id="testsStat">{{ total_tests_today }}</p>
+        </div>
+    </div>
+
+    {% if current_user.role == 'Admin' %}
+    <div class="stat-card">
+        <div class="stat-icon success">
+            <i class="fa-solid fa-money-bill-wave"></i>
+        </div>
+        <div class="stat-details">
+            <h3>Daily Revenue</h3>
+            <p id="revenueStat">PKR {{ "%.2f"|format(revenue_today) }}</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon danger">
+            <i class="fa-solid fa-ban"></i>
+        </div>
+        <div class="stat-details">
+            <h3>Refunded Tests</h3>
+            <p id="cancelledStat">{{ total_cancelled_today }}</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon warning">
+            <i class="fa-solid fa-hand-holding-dollar"></i>
+        </div>
+        <div class="stat-details">
+            <h3>Total Refunds</h3>
+            <p id="refundedStat">PKR {{ "%.2f"|format(refunded_today) }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2>Recent Patients</h2>
+            <a href="#" class="btn btn-secondary btn-icon"><i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+        {% if recent_patients %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Lab No.</th>
+                        <th>Name</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for patient in recent_patients %}
+                    <tr>
+                        <td><strong>{{ patient.lab_number }}</strong></td>
+                        <td>{{ patient.name }}</td>
+                        <td>{{ patient.registration_date.strftime('%I:%M %p') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color: var(--text-light); text-align: center; padding: 2rem 0;">No patients registered today.</p>
+        {% endif %}
+    </div>
+
+    <div class="card" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 3rem;">
+        <div style="background-color: var(--secondary-color); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--primary-color); margin-bottom: 1rem;">
+            <i class="fa-solid fa-user-plus"></i>
+        </div>
+        <h2 style="margin-bottom: 0.5rem;">Register New Patient</h2>
+        <p style="color: var(--text-light); margin-bottom: 1.5rem;">Start a new booking and select tests.</p>
+        <a href="{{ url_for('patient_new') }}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New Registration</a>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // Poll the dashboard stats every 5 seconds for real-time updates
+    setInterval(() => {
+        const dateParam = new URLSearchParams(window.location.search).get('date') || '';
+        const url = dateParam ? `/api/dashboard-stats?date=${dateParam}` : '/api/dashboard-stats';
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('patientsStat').innerText = data.patients;
+                document.getElementById('testsStat').innerText = data.tests;
+                const revStat = document.getElementById('revenueStat');
+                if (revStat) {
+                    revStat.innerText = 'PKR ' + parseFloat(data.revenue).toFixed(2);
+                }
+                const cancStat = document.getElementById('cancelledStat');
+                if (cancStat) {
+                    cancStat.innerText = data.refunded_count;
+                }
+                const refStat = document.getElementById('refundedStat');
+                if (refStat) {
+                    refStat.innerText = 'PKR ' + parseFloat(data.refunded_amount).toFixed(2);
+                }
+            })
+            .catch(err => console.error('Error fetching stats:', err));
+    }, 5000);
+</script>
+{% endblock %}
+{% endblock %}

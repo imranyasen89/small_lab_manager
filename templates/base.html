@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ lab_name }} - Lab Management</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        {% if current_user.is_authenticated %}
+        <!-- Sidebar -->
+        <aside class="sidebar no-print">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-microscope" style="color: var(--primary-color); font-size: 1.5rem;"></i>
+                <h2>LMS</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    Dashboard
+                </a>
+                
+                {% if current_user.role in ['Admin', 'Receptionist'] %}
+                <a href="{{ url_for('patient_new') }}" class="nav-item {% if 'patient_new' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-user-plus"></i>
+                    New Patient
+                </a>
+                {% endif %}
+
+                <a href="{{ url_for('results_list') }}" class="nav-item {% if 'results_list' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-users"></i>
+                    Patients List
+                </a>
+                
+                {% if current_user.role in ['Admin', 'Lab Technician', 'Technologist', 'Pathologist'] %}
+                <a href="{{ url_for('results_list') }}" class="nav-item {% if 'patient_results' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-file-medical"></i>
+                    Enter Results
+                </a>
+                {% endif %}
+
+                {% if current_user.role == 'Admin' %}
+                <div style="border-top: 1px solid var(--border-color); margin: 1rem 0;"></div>
+                <div style="padding: 0 1.5rem; font-size: 0.75rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.5rem;">Admin</div>
+                <a href="{{ url_for('manage_users') }}" class="nav-item {% if 'manage_users' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-user-shield"></i>
+                    Manage Users
+                </a>
+                <a href="{{ url_for('test_list') }}" class="nav-item {% if 'test' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-vials"></i>
+                    Manage Tests
+                </a>
+                <a href="{{ url_for('settings') }}" class="nav-item {% if 'settings' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-cog"></i>
+                    Settings
+                </a>
+                {% endif %}
+            </nav>
+        </aside>
+        {% endif %}
+
+        <!-- Main Content -->
+        <main class="main-content" {% if not current_user.is_authenticated %}style="margin-left: 0;"{% endif %}>
+            {% if current_user.is_authenticated %}
+            <header class="topbar no-print">
+                <div class="lab-brand">
+                    <strong>{{ lab_name }}</strong>
+                </div>
+                <div class="topbar-actions" style="display: flex; align-items: center; gap: 1.5rem;">
+                    <div style="text-align: right;">
+                        <div style="font-weight: 600; font-size: 0.875rem;">{{ current_user.name }}</div>
+                        <div style="color: var(--text-light); font-size: 0.75rem;">{{ current_user.role }}</div>
+                    </div>
+                    <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-icon" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+                </div>
+            </header>
+            {% endif %}
+
+            <div class="content-wrapper">
+                <!-- Flash Messages -->
+                <div class="flash-messages no-print">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                </div>
+
+                <!-- Page Content -->
+                {% block content %}{% endblock %}
+            </div>
+
+            <footer class="no-print" style="text-align: center; padding: 1.5rem; border-top: 1px solid var(--border-color); color: var(--text-light); font-size: 0.875rem; margin-top: auto;">
+                &copy; 2026 <strong>{{ lab_name }}</strong>. All rights reserved. | Developed by <strong>AHS_solutions</strong>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

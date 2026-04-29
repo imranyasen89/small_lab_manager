@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="{{ url_for('results_list') }}" style="color: var(--text-light); text-decoration: none; margin-bottom: 0.5rem; display: inline-block;">
+        <i class="fa-solid fa-arrow-left"></i> Back to Patients
+    </a>
+    <h1>Enter Results: {{ patient.name }}</h1>
+    <p style="color: var(--text-light);">Lab No: {{ patient.lab_number }} | Ref. Doctor: {{ patient.referring_doctor }}</p>
+</div>
+
+<form method="POST">
+    {% for pt in patient.tests %}
+    {% if pt.status != 'Cancelled' %}
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; color: var(--primary-color);">{{ pt.test.name }}</h3>
+        
+        {% if pt.test.parameters %}
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">Parameter</th>
+                            <th style="width: 30%;">Result Value</th>
+                            <th>Unit</th>
+                            <th>Normal Range</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for param in pt.test.parameters %}
+                        <tr>
+                            <td><strong>{{ param.name }}</strong></td>
+                            <td>
+                                <input type="text" name="result_{{ param.id }}" class="form-control" style="padding: 0.5rem;" value="{{ existing_results.get(param.id, '') }}" placeholder="Enter result...">
+                            </td>
+                            <td style="color: var(--text-light);">{{ param.unit or '-' }}</td>
+                            <td style="color: var(--text-light);">{{ param.normal_range or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="color: var(--text-light); font-style: italic;">No parameters defined for this test. Please add them in Test Management.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+        <button type="submit" class="btn btn-primary btn-lg"><i class="fa-solid fa-save"></i> Save Results & View Report</button>
+        <a href="{{ url_for('patient_report', patient_id=patient.id) }}" class="btn btn-secondary"><i class="fa-solid fa-file-pdf"></i> Skip & View Report</a>
+    </div>
+</form>
+{% endblock %}

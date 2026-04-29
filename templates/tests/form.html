@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="{{ url_for('test_list') }}" style="color: var(--text-light); text-decoration: none; margin-bottom: 0.5rem; display: inline-block;">
+        <i class="fa-solid fa-arrow-left"></i> Back to Tests
+    </a>
+    <h1>{% if test %}Edit Test{% else %}Add New Test{% endif %}</h1>
+</div>
+
+<div class="card" style="max-width: 600px;">
+    <form method="POST">
+        <div class="form-group">
+            <label class="form-label" for="name">Test Name <span style="color: var(--danger);">*</span></label>
+            <input type="text" id="name" name="name" class="form-control" value="{{ test.name if test else '' }}" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="price">Price (PKR) <span style="color: var(--danger);">*</span></label>
+            <input type="number" id="price" name="price" class="form-control" value="{{ test.price if test else '' }}" step="0.01" min="0" required>
+        </div>
+        <div style="margin-top: 2rem;">
+            <button type="submit" class="btn btn-primary">{% if test %}Update Test{% else %}Save Test{% endif %}</button>
+            <a href="{{ url_for('test_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+        <h1>Manage Tests</h1>
+        <p style="color: var(--text-light);">Add, edit, or remove diagnostic tests.</p>
+    </div>
+    <a href="{{ url_for('test_new') }}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add New Test</a>
+</div>
+
+<div class="card">
+    {% if tests %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Test Name</th>
+                    <th>Price</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for test in tests %}
+                <tr>
+                    <td>{{ test.id }}</td>
+                    <td><strong>{{ test.name }}</strong></td>
+                    <td>PKR {{ "%.2f"|format(test.price) }}</td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('test_parameters', test_id=test.id) }}" class="btn btn-secondary btn-icon" title="Manage Parameters"><i class="fa-solid fa-list"></i></a>
+                        <a href="{{ url_for('test_edit', test_id=test.id) }}" class="btn btn-secondary btn-icon" title="Edit Test"><i class="fa-solid fa-pen"></i></a>
+                        <form action="{{ url_for('test_delete', test_id=test.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this test?');">
+                            <button type="submit" class="btn btn-danger btn-icon" title="Delete Test"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: var(--text-light); padding: 2rem 0;">No tests found. Add a new test to get started.</p>
+    {% endif %}
+</div>
+{% endblock %}

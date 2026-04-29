@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="{{ url_for('test_list') }}" style="color: var(--text-light); text-decoration: none; margin-bottom: 0.5rem; display: inline-block;">
+        <i class="fa-solid fa-arrow-left"></i> Back to Tests
+    </a>
+    <h1>Manage Parameters: {{ test.name }}</h1>
+    <p style="color: var(--text-light);">Define the parameters to be measured for this test.</p>
+</div>
+
+<div class="grid-2">
+    <!-- Add Parameter Form -->
+    <div>
+        <div class="card">
+            <h3>Add New Parameter</h3>
+            <form method="POST" style="margin-top: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="name">Parameter Name <span style="color: var(--danger);">*</span></label>
+                    <input type="text" id="name" name="name" class="form-control" required placeholder="e.g., Hemoglobin">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="unit">Unit</label>
+                    <input type="text" id="unit" name="unit" class="form-control" placeholder="e.g., g/dL">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="normal_range">Normal Range</label>
+                    <input type="text" id="normal_range" name="normal_range" class="form-control" placeholder="e.g., 13.0 - 17.0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="notes">Notes (Optional)</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="2"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Parameter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Parameter List -->
+    <div>
+        <div class="card">
+            <h3>Existing Parameters</h3>
+            {% if parameters %}
+            <div class="table-responsive" style="margin-top: 1rem;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Unit</th>
+                            <th>Range</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for param in parameters %}
+                        <tr>
+                            <td><strong>{{ param.name }}</strong></td>
+                            <td>{{ param.unit or '-' }}</td>
+                            <td>{{ param.normal_range or '-' }}</td>
+                            <td style="text-align: right;">
+                                <form action="{{ url_for('parameter_delete', param_id=param.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this parameter?');">
+                                    <button type="submit" class="btn btn-danger btn-icon" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p style="color: var(--text-light); padding: 2rem 0; text-align: center;">No parameters defined yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
