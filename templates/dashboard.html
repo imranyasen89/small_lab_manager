@@ -1,17 +1,33 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="dashboard-header" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+<div class="dashboard-header" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
     <div>
         <h1>Dashboard</h1>
         <p style="color: var(--text-light);">Welcome to {{ lab_name }} management system.</p>
     </div>
     <div>
-        <form method="GET" action="{{ url_for('dashboard') }}" style="display: flex; gap: 0.5rem; align-items: center;">
-            <label for="date_filter" style="color: var(--text-dark); font-weight: bold;">Date:</label>
-            <input type="date" id="date_filter" name="date" value="{{ selected_date }}" class="form-control" style="padding: 0.5rem;">
-            <button type="submit" class="btn btn-primary">Filter</button>
+        <form method="GET" action="{{ url_for('dashboard') }}"
+              style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; background: var(--secondary-color); padding: 0.75rem 1rem; border-radius: var(--border-radius); border: 1px solid var(--border-color);">
+            <i class="fa-solid fa-calendar-days" style="color: var(--primary-color);"></i>
+            <label for="date_from" style="color: var(--text-dark); font-weight: 600; font-size: 0.875rem;">From:</label>
+            <input type="date" id="date_from" name="date_from" value="{{ date_from }}"
+                   class="form-control" style="padding: 0.4rem 0.75rem; font-size: 0.875rem;">
+            <label for="date_to" style="color: var(--text-dark); font-weight: 600; font-size: 0.875rem;">To:</label>
+            <input type="date" id="date_to" name="date_to" value="{{ date_to }}"
+                   class="form-control" style="padding: 0.4rem 0.75rem; font-size: 0.875rem;">
+            <button type="submit" class="btn btn-primary" style="padding: 0.4rem 1rem;">
+                <i class="fa-solid fa-filter"></i> Apply
+            </button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary" style="padding: 0.4rem 0.75rem;" title="Reset to today">
+                <i class="fa-solid fa-rotate-left"></i>
+            </a>
         </form>
+        {% if date_from != date_to %}
+        <p style="text-align: right; font-size: 0.8rem; color: var(--text-light); margin-top: 0.4rem;">
+            Showing: <strong>{{ date_from }}</strong> → <strong>{{ date_to }}</strong>
+        </p>
+        {% endif %}
     </div>
 </div>
 
@@ -21,17 +37,17 @@
             <i class="fa-solid fa-users"></i>
         </div>
         <div class="stat-details">
-            <h3>Patients Today</h3>
+            <h3>Patients</h3>
             <p id="patientsStat">{{ total_patients_today }}</p>
         </div>
     </div>
-    
+
     <div class="stat-card">
         <div class="stat-icon warning">
             <i class="fa-solid fa-vials"></i>
         </div>
         <div class="stat-details">
-            <h3>Tests Performed Today</h3>
+            <h3>Tests Performed</h3>
             <p id="testsStat">{{ total_tests_today }}</p>
         </div>
     </div>
@@ -42,7 +58,7 @@
             <i class="fa-solid fa-money-bill-wave"></i>
         </div>
         <div class="stat-details">
-            <h3>Daily Revenue</h3>
+            <h3>Revenue</h3>
             <p id="revenueStat">PKR {{ "%.2f"|format(revenue_today) }}</p>
         </div>
     </div>
@@ -73,7 +89,7 @@
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
             <h2>Recent Patients</h2>
-            <a href="#" class="btn btn-secondary btn-icon"><i class="fa-solid fa-arrow-right"></i></a>
+            <a href="{{ url_for('results_list') }}" class="btn btn-secondary btn-icon"><i class="fa-solid fa-arrow-right"></i></a>
         </div>
         {% if recent_patients %}
         <div class="table-responsive">
@@ -82,6 +98,7 @@
                     <tr>
                         <th>Lab No.</th>
                         <th>Name</th>
+                        <th>Doctor</th>
                         <th>Time</th>
                     </tr>
                 </thead>
@@ -90,14 +107,15 @@
                     <tr>
                         <td><strong>{{ patient.lab_number }}</strong></td>
                         <td>{{ patient.name }}</td>
-                        <td>{{ patient.registration_date.strftime('%I:%M %p') }}</td>
+                        <td style="font-size:0.85rem; color: var(--text-light);">{{ patient.doctor.name if patient.doctor else (patient.referring_doctor or 'Self') }}</td>
+                        <td>{{ patient.registration_date.strftime('%d %b %I:%M %p') }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
         {% else %}
-        <p style="color: var(--text-light); text-align: center; padding: 2rem 0;">No patients registered today.</p>
+        <p style="color: var(--text-light); text-align: center; padding: 2rem 0;">No patients found for this period.</p>
         {% endif %}
     </div>
 
@@ -113,30 +131,28 @@
 
 {% block scripts %}
 <script>
-    // Poll the dashboard stats every 5 seconds for real-time updates
-    setInterval(() => {
-        const dateParam = new URLSearchParams(window.location.search).get('date') || '';
-        const url = dateParam ? `/api/dashboard-stats?date=${dateParam}` : '/api/dashboard-stats';
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('patientsStat').innerText = data.patients;
-                document.getElementById('testsStat').innerText = data.tests;
-                const revStat = document.getElementById('revenueStat');
-                if (revStat) {
-                    revStat.innerText = 'PKR ' + parseFloat(data.revenue).toFixed(2);
-                }
-                const cancStat = document.getElementById('cancelledStat');
-                if (cancStat) {
-                    cancStat.innerText = data.refunded_count;
-                }
-                const refStat = document.getElementById('refundedStat');
-                if (refStat) {
-                    refStat.innerText = 'PKR ' + parseFloat(data.refunded_amount).toFixed(2);
-                }
-            })
-            .catch(err => console.error('Error fetching stats:', err));
-    }, 5000);
+    // Only auto-poll if viewing today (no custom range)
+    const dateFrom = "{{ date_from }}";
+    const dateTo   = "{{ date_to }}";
+    const today    = new Date().toISOString().split('T')[0];
+
+    if (dateFrom === today && dateTo === today) {
+        setInterval(() => {
+            fetch(`/api/dashboard-stats?date_from=${dateFrom}&date_to=${dateTo}`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('patientsStat').innerText = data.patients;
+                    document.getElementById('testsStat').innerText    = data.tests;
+                    const revStat  = document.getElementById('revenueStat');
+                    const canStat  = document.getElementById('cancelledStat');
+                    const refStat  = document.getElementById('refundedStat');
+                    if (revStat) revStat.innerText = 'PKR ' + parseFloat(data.revenue).toFixed(2);
+                    if (canStat) canStat.innerText = data.refunded_count;
+                    if (refStat) refStat.innerText = 'PKR ' + parseFloat(data.refunded_amount).toFixed(2);
+                })
+                .catch(err => console.error('Stats poll error:', err));
+        }, 8000);
+    }
 </script>
 {% endblock %}
 {% endblock %}

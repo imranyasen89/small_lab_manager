@@ -49,6 +49,13 @@
 
                 {% if current_user.role == 'Admin' %}
                 <div style="border-top: 1px solid var(--border-color); margin: 1rem 0;"></div>
+                <div style="padding: 0 1.5rem; font-size: 0.75rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.5rem;">Reports</div>
+                <a href="{{ url_for('cash_summary') }}" class="nav-item {% if 'cash_summary' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                    Cash Summary
+                </a>
+
+                <div style="border-top: 1px solid var(--border-color); margin: 1rem 0;"></div>
                 <div style="padding: 0 1.5rem; font-size: 0.75rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.5rem;">Admin</div>
                 <a href="{{ url_for('manage_users') }}" class="nav-item {% if 'manage_users' in request.endpoint %}active{% endif %}">
                     <i class="fa-solid fa-user-shield"></i>
@@ -57,6 +64,10 @@
                 <a href="{{ url_for('test_list') }}" class="nav-item {% if 'test' in request.endpoint %}active{% endif %}">
                     <i class="fa-solid fa-vials"></i>
                     Manage Tests
+                </a>
+                <a href="{{ url_for('doctor_list') }}" class="nav-item {% if 'doctor' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-user-md"></i>
+                    Manage Doctors
                 </a>
                 <a href="{{ url_for('settings') }}" class="nav-item {% if 'settings' in request.endpoint %}active{% endif %}">
                     <i class="fa-solid fa-cog"></i>
@@ -91,7 +102,7 @@
                         {% if messages %}
                             {% for category, message in messages %}
                                 <div class="alert alert-{{ category }}">
-                                    {{ message }}
+                                    {{ message|safe }}
                                 </div>
                             {% endfor %}
                         {% endif %}

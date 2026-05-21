@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- ═══════════ TOP BAR ═══════════ -->
+<div class="no-print" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1>Cash Summary Report</h1>
+        <p style="color: var(--text-light);">
+            {{ start_date.strftime('%d %b %Y') }} → {{ end_date.strftime('%d %b %Y') }}
+            &nbsp;|&nbsp; <strong>{{ summary.total_patients }}</strong> patients
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+        <a href="{{ url_for('cash_summary', period='today') }}"     class="btn {% if period == 'today'     %}btn-primary{% else %}btn-secondary{% endif %}">Today</a>
+        <a href="{{ url_for('cash_summary', period='yesterday') }}" class="btn {% if period == 'yesterday' %}btn-primary{% else %}btn-secondary{% endif %}">Yesterday</a>
+        <a href="{{ url_for('cash_summary', period='weekly') }}"    class="btn {% if period == 'weekly'    %}btn-primary{% else %}btn-secondary{% endif %}">This Week</a>
+        <a href="{{ url_for('cash_summary', period='monthly') }}"   class="btn {% if period == 'monthly'   %}btn-primary{% else %}btn-secondary{% endif %}">This Month</a>
+        <button onclick="window.print()" class="btn btn-secondary"><i class="fa-solid fa-print"></i> Print</button>
+    </div>
+</div>
+
+<!-- ═══════════ FILTERS ROW ═══════════ -->
+<div class="no-print card" style="padding: 1rem 1.5rem; margin-bottom: 1.5rem;">
+    <form method="GET" action="{{ url_for('cash_summary') }}"
+          style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+        <div>
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 0.3rem;">From Date</label>
+            <input type="date" name="date_from" value="{{ custom_from }}" class="form-control" style="padding: 0.4rem 0.75rem;">
+        </div>
+        <div>
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 0.3rem;">To Date</label>
+            <input type="date" name="date_to" value="{{ custom_to }}" class="form-control" style="padding: 0.4rem 0.75rem;">
+        </div>
+        <div>
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 0.3rem;">Doctor</label>
+            <select name="doctor_id" class="form-control" style="padding: 0.4rem 0.75rem; min-width: 180px;">
+                <option value="">-- All Doctors --</option>
+                {% for dr in all_doctors %}
+                <option value="{{ dr.id }}" {% if filter_dr_id == dr.id|string %}selected{% endif %}>{{ dr.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-filter"></i> Apply Filters</button>
+            <a href="{{ url_for('cash_summary') }}" class="btn btn-secondary"><i class="fa-solid fa-rotate-left"></i> Reset</a>
+        </div>
+    </form>
+</div>
+
+<!-- ═══════════ SUMMARY CARDS ═══════════ -->
+<div class="dashboard-stats no-print" style="margin-bottom: 1.5rem;">
+    <div class="stat-card">
+        <div class="stat-icon primary"><i class="fa-solid fa-users"></i></div>
+        <div class="stat-details">
+            <h3>Total Patients</h3>
+            <p>{{ summary.total_patients }}</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon success"><i class="fa-solid fa-money-bill-wave"></i></div>
+        <div class="stat-details">
+            <h3>Gross Revenue</h3>
+            <p>PKR {{ "%.0f"|format(summary.total_revenue) }}</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon danger"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+        <div class="stat-details">
+            <h3>Doctors Share</h3>
+            <p>PKR {{ "%.0f"|format(summary.total_dr_share) }}</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon warning"><i class="fa-solid fa-sack-dollar"></i></div>
+        <div class="stat-details">
+            <h3>Net Lab Cash</h3>
+            <p>PKR {{ "%.0f"|format(summary.net_cash) }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ DOCTOR-WISE SECTIONS ═══════════ -->
+<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    {% if summary.doctor_breakdown %}
+        {% for dr_id, data in summary.doctor_breakdown.items() %}
+        <div class="card doctor-section">
+            <!-- Doctor Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;"
+                 onclick="toggleSection('dr-{{ dr_id }}')">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--secondary-color); display: flex; align-items: center; justify-content: center; color: var(--primary-color); font-size: 1.2rem;">
+                        <i class="fa-solid fa-user-doctor"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.1rem;">{{ data.name }}</h3>
+                        <span style="font-size: 0.82rem; color: var(--text-light);">
+                            {{ data.patients_count }} patient{{ 's' if data.patients_count != 1 }}
+                            {% if data.share_pct > 0 %} &nbsp;·&nbsp; {{ data.share_pct }}% share{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 2rem;">
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.78rem; color: var(--text-light);">Revenue</div>
+                        <strong style="color: var(--success);">PKR {{ "%.2f"|format(data.revenue) }}</strong>
+                    </div>
+                    {% if data.share > 0 %}
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.78rem; color: var(--text-light);">Dr Share</div>
+                        <strong style="color: var(--danger);">PKR {{ "%.2f"|format(data.share) }}</strong>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.78rem; color: var(--text-light);">Net Cash</div>
+                        <strong>PKR {{ "%.2f"|format(data.revenue - data.share) }}</strong>
+                    </div>
+                    {% endif %}
+                    <i class="fa-solid fa-chevron-down toggle-icon" id="icon-dr-{{ dr_id }}"
+                       style="color: var(--text-light); transition: transform 0.2s;"></i>
+                </div>
+            </div>
+
+            <!-- Patient Detail Table (collapsible) -->
+            <div id="dr-{{ dr_id }}" style="display: none; margin-top: 1.25rem;">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Lab No.</th>
+                                <th>Patient Name</th>
+                                <th style="text-align:center;">Age/Gender</th>
+                                <th>Date</th>
+                                <th style="text-align:right;">Amount (PKR)</th>
+                                {% if data.share_pct > 0 %}
+                                <th style="text-align:right; color: var(--danger);">Dr Share (PKR)</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i, p in data.patients | enumerate %}
+                            <tr>
+                                <td style="color: var(--text-light); font-size: 0.85rem;">{{ i + 1 }}</td>
+                                <td><strong>{{ p.lab_number }}</strong></td>
+                                <td>{{ p.name }}</td>
+                                <td style="text-align:center; font-size:0.85rem; color: var(--text-light);">{{ p.age }} / {{ p.gender }}</td>
+                                <td style="font-size:0.85rem;">{{ p.date }}</td>
+                                <td style="text-align:right; font-weight: 600;">{{ "%.2f"|format(p.amount) }}</td>
+                                {% if data.share_pct > 0 %}
+                                <td style="text-align:right; color: var(--danger);">{{ "%.2f"|format(p.share) }}</td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr style="border-top: 2px solid var(--border-color); font-weight: 700; background: var(--secondary-color);">
+                                <td colspan="5" style="padding: 0.6rem 0.5rem;">Total</td>
+                                <td style="text-align:right; padding: 0.6rem 0.5rem;">{{ "%.2f"|format(data.revenue) }}</td>
+                                {% if data.share_pct > 0 %}
+                                <td style="text-align:right; padding: 0.6rem 0.5rem; color: var(--danger);">{{ "%.2f"|format(data.share) }}</td>
+                                {% endif %}
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="card" style="text-align: center; padding: 3rem; color: var(--text-light);">
+            <i class="fa-solid fa-inbox" style="font-size: 2.5rem; margin-bottom: 1rem; display: block;"></i>
+            No patient records found for the selected filters.
+        </div>
+    {% endif %}
+</div>
+
+<!-- ═══════════ PRINT VIEW ═══════════ -->
+<div class="printable-summary" style="display: none; background: white; color: black; padding: 2rem;">
+    <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+        <h1 style="margin: 0;">{{ lab_name }}</h1>
+        <h2 style="margin: 0.25rem 0;">Cash Summary Report</h2>
+        <p style="margin: 0;">{{ start_date.strftime('%d %b %Y') }} to {{ end_date.strftime('%d %b %Y') }}</p>
+    </div>
+
+    <table style="width:100%; border-collapse: collapse; margin-bottom: 1.5rem;">
+        <tbody>
+            <tr><td style="padding:0.4rem;">Total Revenue</td><td style="text-align:right; padding:0.4rem;"><strong>PKR {{ "%.2f"|format(summary.total_revenue) }}</strong></td></tr>
+            <tr style="color:#666;"><td style="padding:0.4rem;">Doctors Share (–)</td><td style="text-align:right; padding:0.4rem;">PKR {{ "%.2f"|format(summary.total_dr_share) }}</td></tr>
+            <tr style="border-top: 2px solid #000; font-size:1.2rem;"><td style="padding:0.5rem;"><strong>Net Lab Cash</strong></td><td style="text-align:right; padding:0.5rem;"><strong>PKR {{ "%.2f"|format(summary.net_cash) }}</strong></td></tr>
+        </tbody>
+    </table>
+
+    {% for dr_id, data in summary.doctor_breakdown.items() %}
+    <h3 style="border-left: 4px solid #2563eb; padding-left: 0.5rem; margin-top: 1.5rem;">{{ data.name }} ({{ data.patients_count }} patients)</h3>
+    <table style="width:100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.85rem;">
+        <thead>
+            <tr style="border-bottom: 1px solid #000;">
+                <th style="text-align:left; padding:0.3rem;">#</th>
+                <th style="text-align:left; padding:0.3rem;">Lab No.</th>
+                <th style="text-align:left; padding:0.3rem;">Name</th>
+                <th style="text-align:center; padding:0.3rem;">Age/Gender</th>
+                <th style="text-align:left; padding:0.3rem;">Date</th>
+                <th style="text-align:right; padding:0.3rem;">Amount</th>
+                {% if data.share_pct > 0 %}<th style="text-align:right; padding:0.3rem;">Dr Share</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for i, p in data.patients | enumerate %}
+            <tr style="border-bottom: 1px dotted #ccc;">
+                <td style="padding:0.3rem;">{{ i + 1 }}</td>
+                <td style="padding:0.3rem;">{{ p.lab_number }}</td>
+                <td style="padding:0.3rem;">{{ p.name }}</td>
+                <td style="text-align:center; padding:0.3rem;">{{ p.age }}/{{ p.gender }}</td>
+                <td style="padding:0.3rem;">{{ p.date }}</td>
+                <td style="text-align:right; padding:0.3rem;">{{ "%.2f"|format(p.amount) }}</td>
+                {% if data.share_pct > 0 %}<td style="text-align:right; padding:0.3rem;">{{ "%.2f"|format(p.share) }}</td>{% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr style="border-top: 1px solid #000; font-weight: bold;">
+                <td colspan="5" style="padding:0.3rem;">Subtotal</td>
+                <td style="text-align:right; padding:0.3rem;">{{ "%.2f"|format(data.revenue) }}</td>
+                {% if data.share_pct > 0 %}<td style="text-align:right; padding:0.3rem;">{{ "%.2f"|format(data.share) }}</td>{% endif %}
+            </tr>
+        </tfoot>
+    </table>
+    {% endfor %}
+
+    <div style="margin-top: 3rem; display: flex; justify-content: space-between;">
+        <div style="text-align: center;"><div style="border-bottom: 1px solid #000; width: 150px; margin-bottom: 0.4rem;"></div><p>Prepared By</p></div>
+        <div style="text-align: center;"><div style="border-bottom: 1px solid #000; width: 150px; margin-bottom: 0.4rem;"></div><p>Admin Signature</p></div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .no-print, .dashboard-stats { display: none !important; }
+    .doctor-section { display: none !important; }
+    .printable-summary { display: block !important; }
+    body { background: white !important; }
+    .main-content { margin-left: 0 !important; width: 100% !important; padding: 0 !important; }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleSection(id) {
+    const el   = document.getElementById(id);
+    const icon = document.getElementById('icon-' + id);
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        el.style.display = 'none';
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+// Auto-expand if only one doctor section
+document.addEventListener('DOMContentLoaded', () => {
+    const sections = document.querySelectorAll('[id^="dr-"]');
+    if (sections.length === 1) toggleSection(sections[0].id);
+});
+</script>
+{% endblock %}

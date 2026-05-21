@@ -21,9 +21,25 @@
             <input type="text" id="lab_address" name="lab_address" class="form-control" value="{{ settings.get('lab_address', '') }}">
         </div>
 
-        <div class="form-group" style="margin-top: 1rem;">
-            <label class="form-label" for="lab_contact">Contact Number</label>
+        <div class="form-group">
+            <label class="form-label" for="lab_contact">Lab Contact</label>
             <input type="text" id="lab_contact" name="lab_contact" class="form-control" value="{{ settings.get('lab_contact', '') }}">
+        </div>
+
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">Report Footer (Signatures)</h3>
+        <p style="color: var(--text-light); margin-bottom: 1rem;">Enter names to be displayed at the bottom of reports (Max 3).</p>
+        
+        <div class="form-group">
+            <label class="form-label" for="footer_dr1">Doctor 1 Name</label>
+            <input type="text" id="footer_dr1" name="footer_dr1" class="form-control" value="{{ settings.get('footer_dr1', '') }}" placeholder="e.g., Dr. John Doe (Pathologist)">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="footer_dr2">Doctor 2 Name</label>
+            <input type="text" id="footer_dr2" name="footer_dr2" class="form-control" value="{{ settings.get('footer_dr2', '') }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="footer_dr3">Doctor 3 Name</label>
+            <input type="text" id="footer_dr3" name="footer_dr3" class="form-control" value="{{ settings.get('footer_dr3', '') }}">
         </div>
         
         <div style="margin-top: 2rem;">

@@ -14,6 +14,13 @@ class Setting(db.Model):
     key = db.Column(db.String(50), unique=True, nullable=False)
     value = db.Column(db.String(255), nullable=False)
 
+class Doctor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    share_percentage = db.Column(db.Float, default=0.0)
+
+    patients = db.relationship('Patient', backref='doctor', lazy=True)
+
 class Patient(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lab_number = db.Column(db.String(50), unique=True, nullable=False)
@@ -21,8 +28,15 @@ class Patient(db.Model):
     gender = db.Column(db.String(10), nullable=False)
     age = db.Column(db.Integer, nullable=False)
     contact = db.Column(db.String(20), nullable=True)
-    referring_doctor = db.Column(db.String(100), nullable=False)
+    referring_doctor = db.Column(db.String(100), nullable=True) # Fallback/Legacy
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctor.id'), nullable=True)
     registration_date = db.Column(db.DateTime, default=datetime.now)
+
+    # Billing fields
+    total_amount = db.Column(db.Float, default=0.0)
+    discount_type = db.Column(db.String(20), default='none') # none, fixed, percentage
+    discount_value = db.Column(db.Float, default=0.0)
+    paid_amount = db.Column(db.Float, default=0.0)
 
     tests = db.relationship('PatientTest', backref='patient', lazy=True)
 
@@ -48,7 +62,7 @@ class PatientTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
     test_id = db.Column(db.Integer, db.ForeignKey('test.id'), nullable=False)
-    status = db.Column(db.String(20), default='Pending') # Pending, Completed
+    status = db.Column(db.String(20), default='Pending') # Pending, Completed, Cancelled
 
     results = db.relationship('Result', backref='patient_test', lazy=True, cascade="all, delete-orphan")
 
