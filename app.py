@@ -8,14 +8,7 @@ from functools import wraps
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dev-secret-key'  # Replace in production
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lms.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# Performance: tune connection pool to avoid stalls
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,   # drops dead connections before use
-    'pool_recycle': 280,     # recycle connections every ~5 min
-}
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-pro-lab-2026')
 
 db.init_app(app)
 
@@ -28,7 +21,7 @@ login_manager.init_app(app)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return User.query.get(user_id)
 
 # RBAC Decorator
 def role_required(*roles):
@@ -37,7 +30,7 @@ def role_required(*roles):
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
                 return redirect(url_for('login', next=request.url))
-            if current_user.role not in roles and current_user.role != 'Admin':
+            if current_user.role not in roles and current_user.role not in ['Admin', 'SuperAdmin']:
                 flash('You do not have permission to access this page.', 'error')
                 return redirect(url_for('dashboard'))
             return f(*args, **kwargs)
@@ -51,7 +44,7 @@ def get_settings():
         try:
             g.settings = {s.key: s.value for s in Setting.query.all()}
         except Exception:
-            g.settings = {}  # table may not exist during first init
+            g.settings = {}
     return g.settings
 
 
@@ -70,28 +63,32 @@ def inject_globals():
         now=datetime.now(),
     )
 
+# Bootstrap default settings and admin user if empty
+def init_defaults():
+    try:
+        if Setting.query.count() == 0:
+            db.session.add(Setting(key='lab_name', value='Ideal Diagnostic Center'))
+            db.session.add(Setting(key='lab_address', value='123 Health Avenue, Medical District'))
+            db.session.add(Setting(key='lab_contact', value='+92 3027563119'))
+            db.session.add(Setting(key='footer_dr1', value='Dr. A. Pathologist'))
+            db.session.add(Setting(key='footer_dr2', value=''))
+            db.session.add(Setting(key='footer_dr3', value=''))
+            db.session.commit()
+
+        if User.query.count() == 0:
+            admin_user = User(
+                username='admin',
+                password_hash=generate_password_hash('admin123'),
+                role='Admin',
+                name='System Administrator'
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+    except Exception as e:
+        app.logger.warning(f"Default initialization warning: {e}")
+
 with app.app_context():
-    db.create_all()
-    
-    if Setting.query.count() == 0:
-        db.session.add(Setting(key='lab_name', value='Ideal Diagnostic Center'))
-        db.session.add(Setting(key='lab_address', value='123 Health Avenue, Medical District'))
-        db.session.add(Setting(key='lab_contact', value='+91 98765 43210'))
-        db.session.add(Setting(key='footer_dr1', value='Dr. A. Pathologist'))
-        db.session.add(Setting(key='footer_dr2', value=''))
-        db.session.add(Setting(key='footer_dr3', value=''))
-        db.session.commit()
-        
-    # Create default Admin if no users exist
-    if User.query.count() == 0:
-        admin_user = User(
-            username='admin',
-            password_hash=generate_password_hash('admin123'),
-            role='Admin',
-            name='System Administrator'
-        )
-        db.session.add(admin_user)
-        db.session.commit()
+    init_defaults()
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -154,14 +151,18 @@ def delete_user(user_id):
 @role_required('Admin')
 def settings():
     if request.method == 'POST':
-        # Update or create settings dynamically
-        keys_to_update = ['lab_name', 'lab_address', 'lab_contact', 'footer_dr1', 'footer_dr2', 'footer_dr3']
+        if current_user.role == 'SuperAdmin':
+            keys_to_update = ['lab_name', 'lab_address', 'lab_contact', 'footer_dr1', 'footer_dr2', 'footer_dr3']
+        else:
+            keys_to_update = ['footer_dr1', 'footer_dr2', 'footer_dr3']
+            
         for key in keys_to_update:
             new_val = request.form.get(key)
             if new_val is not None:
                 setting = Setting.query.filter_by(key=key).first()
                 if setting:
                     setting.value = new_val
+                    db.session.add(setting)
                 else:
                     db.session.add(Setting(key=key, value=new_val))
         
@@ -188,33 +189,21 @@ def dashboard_stats():
     if date_to < date_from:
         date_to = date_from
 
-    total_patients_target = Patient.query.filter(
+    matching_patients = Patient.query.filter(
         db.func.date(Patient.registration_date) >= date_from,
         db.func.date(Patient.registration_date) <= date_to
-    ).count()
+    ).all()
 
-    total_tests_target = PatientTest.query.join(Patient).filter(
-        db.func.date(Patient.registration_date) >= date_from,
-        db.func.date(Patient.registration_date) <= date_to,
-        PatientTest.status != 'Cancelled'
-    ).count()
+    total_patients_target = len(matching_patients)
+    total_tests_target = sum(1 for p in matching_patients for pt in p.tests if pt.status != 'Cancelled')
 
     revenue_target = 0.0
     cancelled_target = 0
     refunded_target = 0.0
 
     if current_user.role == 'Admin':
-        revenue_val = db.session.query(db.func.sum(Patient.paid_amount)).filter(
-            db.func.date(Patient.registration_date) >= date_from,
-            db.func.date(Patient.registration_date) <= date_to
-        ).scalar()
-        revenue_target = revenue_val if revenue_val else 0.0
-
-        cancelled_target = PatientTest.query.join(Patient).filter(
-            db.func.date(Patient.registration_date) >= date_from,
-            db.func.date(Patient.registration_date) <= date_to,
-            PatientTest.status == 'Cancelled'
-        ).count()
+        revenue_target = sum(p.paid_amount for p in matching_patients)
+        cancelled_target = sum(1 for p in matching_patients for pt in p.tests if pt.status == 'Cancelled')
 
         refunded_val = db.session.query(db.func.sum(RefundRecord.amount_refunded)).filter(
             db.func.date(RefundRecord.refund_date) >= date_from,
@@ -246,33 +235,21 @@ def dashboard():
     if date_to < date_from:
         date_to = date_from
 
-    total_patients_today = Patient.query.filter(
+    matching_patients = Patient.query.filter(
         db.func.date(Patient.registration_date) >= date_from,
         db.func.date(Patient.registration_date) <= date_to
-    ).count()
+    ).all()
 
-    total_tests_today = PatientTest.query.join(Patient).filter(
-        db.func.date(Patient.registration_date) >= date_from,
-        db.func.date(Patient.registration_date) <= date_to,
-        PatientTest.status != 'Cancelled'
-    ).count()
+    total_patients_today = len(matching_patients)
+    total_tests_today = sum(1 for p in matching_patients for pt in p.tests if pt.status != 'Cancelled')
 
     revenue_today = 0.0
     total_cancelled_today = 0
     refunded_today = 0.0
 
     if current_user.role == 'Admin':
-        revenue_val = db.session.query(db.func.sum(Patient.paid_amount)).filter(
-            db.func.date(Patient.registration_date) >= date_from,
-            db.func.date(Patient.registration_date) <= date_to
-        ).scalar()
-        revenue_today = revenue_val if revenue_val else 0.0
-
-        total_cancelled_today = PatientTest.query.join(Patient).filter(
-            db.func.date(Patient.registration_date) >= date_from,
-            db.func.date(Patient.registration_date) <= date_to,
-            PatientTest.status == 'Cancelled'
-        ).count()
+        revenue_today = sum(p.paid_amount for p in matching_patients)
+        total_cancelled_today = sum(1 for p in matching_patients for pt in p.tests if pt.status == 'Cancelled')
 
         refunded_val = db.session.query(db.func.sum(RefundRecord.amount_refunded)).filter(
             db.func.date(RefundRecord.refund_date) >= date_from,
@@ -280,10 +257,7 @@ def dashboard():
         ).scalar()
         refunded_today = refunded_val if refunded_val else 0.0
 
-    recent_patients = Patient.query.filter(
-        db.func.date(Patient.registration_date) >= date_from,
-        db.func.date(Patient.registration_date) <= date_to
-    ).order_by(Patient.registration_date.desc()).limit(10).all()
+    recent_patients = sorted(matching_patients, key=lambda p: p.registration_date, reverse=True)[:10]
 
     return render_template('dashboard.html',
                            total_patients_today=total_patients_today,
@@ -327,6 +301,7 @@ def test_edit(test_id):
     if request.method == 'POST':
         test.name = request.form.get('name')
         test.price = float(request.form.get('price'))
+        db.session.add(test)
         db.session.commit()
         flash('Test updated successfully!', 'success')
         return redirect(url_for('test_list'))
@@ -339,7 +314,7 @@ def test_delete(test_id):
     test = Test.query.get_or_404(test_id)
     db.session.delete(test)
     db.session.commit()
-    flash('Test deleted successfully!', 'success')
+    flash('Test deleted successfully.', 'success')
     return redirect(url_for('test_list'))
 
 @app.route('/tests/<int:test_id>/parameters', methods=['GET', 'POST'])
@@ -399,6 +374,7 @@ def doctor_edit(dr_id):
     if request.method == 'POST':
         dr.name = request.form.get('name')
         dr.share_percentage = float(request.form.get('share_percentage'))
+        db.session.add(dr)
         db.session.commit()
         flash('Doctor updated successfully!', 'success')
         return redirect(url_for('doctor_list'))
@@ -411,7 +387,7 @@ def doctor_delete(dr_id):
     dr = Doctor.query.get_or_404(dr_id)
     db.session.delete(dr)
     db.session.commit()
-    flash('Doctor deleted successfully!', 'success')
+    flash('Doctor deleted successfully.', 'success')
     return redirect(url_for('doctor_list'))
 
 @app.route('/patients/new', methods=['GET', 'POST'])
@@ -517,8 +493,8 @@ def patient_receipt(patient_id):
 def refund_patient_test(pt_id):
     pt = PatientTest.query.get_or_404(pt_id)
     if pt.status != 'Cancelled':
-        old_status = pt.status
         pt.status = 'Cancelled'
+        db.session.add(pt)
         reason = request.form.get('reason', 'Refunded by staff')
         refund = RefundRecord(patient_test_id=pt.id, amount_refunded=pt.test.price, reason=reason)
         db.session.add(refund)
@@ -531,7 +507,6 @@ def refund_patient_test(pt_id):
 @app.route('/results')
 @login_required
 def results_list():
-    # Limit to 100 most recent patients to keep page fast
     patients = Patient.query.order_by(Patient.registration_date.desc()).limit(100).all()
     return render_template('results/index.html', patients=patients)
 
@@ -545,17 +520,15 @@ def patient_results(patient_id):
         for pt in patient.tests:
             if pt.status == 'Cancelled':
                 continue
-            # Mark status as completed if results are entered
             pt.status = 'Completed'
+            db.session.add(pt)
             for param in pt.test.parameters:
-                # Get the result value from the form
-                # Name of input is 'result_param_id'
                 res_val = request.form.get(f'result_{param.id}')
                 if res_val is not None:
-                    # Check if result already exists
                     existing_result = Result.query.filter_by(patient_test_id=pt.id, parameter_id=param.id).first()
                     if existing_result:
                         existing_result.result_value = res_val
+                        db.session.add(existing_result)
                     else:
                         new_res = Result(patient_test_id=pt.id, parameter_id=param.id, result_value=res_val)
                         db.session.add(new_res)
@@ -564,7 +537,6 @@ def patient_results(patient_id):
         flash('Results saved successfully!', 'success')
         return redirect(url_for('patient_report', patient_id=patient.id))
 
-    # For GET request, fetch existing results to populate form if any
     existing_results = {}
     for pt in patient.tests:
         if pt.status == 'Cancelled':
@@ -579,7 +551,6 @@ def patient_results(patient_id):
 def patient_report(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     
-    # Organize data for report: test -> list of results
     report_data = []
     for pt in patient.tests:
         if pt.status == 'Cancelled':
@@ -588,17 +559,13 @@ def patient_report(patient_id):
             'test_name': pt.test.name,
             'results': []
         }
-        # To display in order of parameters
         for param in pt.test.parameters:
-            # Find the result
             res = next((r for r in pt.results if r.parameter_id == param.id), None)
             val = res.result_value if res else ''
             
-            # Simple abnormality check logic (optional, basic string check)
             is_abnormal = False
             try:
                 if val and param.normal_range:
-                    # Extract numbers from normal_range "x - y"
                     parts = param.normal_range.split('-')
                     if len(parts) == 2:
                         min_val = float(parts[0].strip())
@@ -607,7 +574,7 @@ def patient_report(patient_id):
                         if float_val < min_val or float_val > max_val:
                             is_abnormal = True
             except:
-                pass # If parsing fails, ignore abnormality highlighting
+                pass
                 
             test_data['results'].append({
                 'parameter_name': param.name,
@@ -627,7 +594,6 @@ def cash_summary():
     today = date.today()
     period = request.args.get('period', 'today')
 
-    # Custom date range overrides period shortcuts
     custom_from = request.args.get('date_from', '')
     custom_to   = request.args.get('date_to', '')
 
@@ -650,33 +616,36 @@ def cash_summary():
         else:  # today
             start_date = end_date = today
 
-    # Optional doctor filter
     filter_dr_id = request.args.get('doctor_id', '', type=str)
 
-    q = Patient.query.filter(
+    all_in_period = Patient.query.filter(
         db.func.date(Patient.registration_date) >= start_date,
         db.func.date(Patient.registration_date) <= end_date
-    )
+    ).all()
+
     if filter_dr_id and filter_dr_id != '':
         try:
-            q = q.filter(Patient.doctor_id == int(filter_dr_id))
+            target_id = int(filter_dr_id)
+            patients = [p for p in all_in_period if p.doctor_id == target_id]
         except ValueError:
-            pass
+            patients = all_in_period
+    else:
+        patients = all_in_period
 
-    patients = q.order_by(Patient.registration_date.asc()).all()
+    patients = sorted(patients, key=lambda p: p.registration_date)
 
     summary_data = {
         'total_revenue': 0.0,
         'total_dr_share': 0.0,
         'net_cash': 0.0,
         'total_patients': len(patients),
-        'doctor_breakdown': {}   # dr_id -> {name, share_pct, patients:[], revenue, share}
+        'doctor_breakdown': {}
     }
 
     for p in patients:
         summary_data['total_revenue'] += p.paid_amount
-        if p.doctor_id:
-            dr    = p.doctor
+        if p.doctor_id and p.doctor:
+            dr = p.doctor
             share = (p.paid_amount * dr.share_percentage) / 100
             summary_data['total_dr_share'] += share
             if dr.id not in summary_data['doctor_breakdown']:
@@ -686,7 +655,7 @@ def cash_summary():
                     'patients_count': 0,
                     'revenue': 0.0,
                     'share': 0.0,
-                    'patients': []   # list of patient dicts for detail table
+                    'patients': []
                 }
             bd = summary_data['doctor_breakdown'][dr.id]
             bd['patients_count'] += 1
@@ -702,7 +671,6 @@ def cash_summary():
                 'share':      share
             })
         else:
-            # Self-referred — group under 'No Doctor'
             key = 0
             if key not in summary_data['doctor_breakdown']:
                 summary_data['doctor_breakdown'][key] = {
@@ -716,6 +684,7 @@ def cash_summary():
             bd = summary_data['doctor_breakdown'][key]
             bd['patients_count'] += 1
             bd['revenue']        += p.paid_amount
+            bd['share']          += 0.0
             bd['patients'].append({
                 'lab_number': p.lab_number,
                 'name':       p.name,
@@ -727,8 +696,7 @@ def cash_summary():
             })
 
     summary_data['net_cash'] = summary_data['total_revenue'] - summary_data['total_dr_share']
-
-    all_doctors = Doctor.query.order_by(Doctor.name).all()
+    all_doctors = sorted(Doctor.query.all(), key=lambda d: d.name)
 
     return render_template('reports/cash_summary.html',
                            summary=summary_data,
@@ -741,4 +709,5 @@ def cash_summary():
                            custom_to=str(end_date))
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)

@@ -1,22 +1,34 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="no-print" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+<div class="no-print" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; padding: 1rem; border-radius: var(--border-radius); border: 1px solid #e3e6f0;">
     <div>
         <a href="{{ url_for('results_list') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Back to List</a>
         <a href="{{ url_for('patient_results', patient_id=patient.id) }}" class="btn btn-secondary" style="margin-left: 0.5rem;"><i class="fa-solid fa-pen"></i> Edit Results</a>
     </div>
-    <button onclick="window.print()" class="btn btn-primary"><i class="fa-solid fa-print"></i> Print Report</button>
+    <div style="display: flex; align-items: center; gap: 1.5rem;">
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: #4e73df; cursor: pointer; margin: 0; user-select: none;">
+                <input type="checkbox" id="toggleHeader" checked style="width: 1.15rem; height: 1.15rem; cursor: pointer; accent-color: #4e73df;">
+                Print Header
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: #4e73df; cursor: pointer; margin: 0; user-select: none;">
+                <input type="checkbox" id="toggleFooter" checked style="width: 1.15rem; height: 1.15rem; cursor: pointer; accent-color: #4e73df;">
+                Print Footer
+            </label>
+        </div>
+        <button onclick="window.print()" class="btn btn-primary"><i class="fa-solid fa-print"></i> Print Report</button>
+    </div>
 </div>
 
-<div class="report-wrapper">
+<div class="report-wrapper" id="reportWrapper">
     <table class="report-master-table">
         <thead>
             <tr>
                 <td>
                     <!-- Lab Header -->
                     <div class="report-header">
-                        <div style="text-align: center; border-bottom: 3px solid var(--primary-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                        <div class="lab-header-brand" style="text-align: center; border-bottom: 3px solid var(--primary-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
                             <h1 style="color: var(--primary-color); margin: 0; font-size: 2.5rem; font-weight: 800; line-height: 1.1;">{{ lab_name }}</h1>
                             <p style="color: #333; font-size: 0.95rem; margin: 0.5rem 0 0 0; font-weight: 500;">{{ lab_address }}</p>
                             <p style="color: #333; font-size: 0.9rem; margin: 0;">Ph: {{ lab_contact }}</p>
@@ -92,7 +104,7 @@
                 <td>
                     <div class="report-footer">
                         <!-- Consultant Doctors in Footer -->
-                        <div style="display: flex; justify-content: space-around; align-items: flex-start; padding-top: 1rem; border-top: 2px solid #333; margin-top: 2rem; color: #000;">
+                        <div class="report-footer-doctors" style="display: flex; justify-content: space-around; align-items: flex-start; padding-top: 1rem; border-top: 2px solid #333; margin-top: 2rem; color: #000;">
                             {% if footer_dr1 %}
                             <div style="text-align: center; flex: 1;">
                                 <p style="font-weight: 700; font-size: 0.9rem; margin: 0;">{{ footer_dr1 }}</p>
@@ -140,6 +152,14 @@
     border-collapse: collapse;
 }
 
+/* Hide header and footer based on class toggling */
+.hide-header .lab-header-brand {
+    display: none !important;
+}
+.hide-footer .report-footer-doctors {
+    display: none !important;
+}
+
 @media print {
     @page {
         size: A4;
@@ -173,17 +193,71 @@
         display: table-row-group;
     }
 
-    /* Ensure header cell has bottom spacing on repeated pages */
+    /* Ensure header cell has bottom spacing on repeated pages unless hidden */
     .report-master-table thead td {
         padding-bottom: 0.75rem;
     }
+    .hide-header .report-master-table thead td {
+        padding-bottom: 0 !important;
+    }
 
-    /* Ensure footer cell has top spacing */
+    /* Ensure footer cell has top spacing unless hidden */
     .report-master-table tfoot td {
         padding-top: 0.75rem;
+    }
+    .hide-footer .report-master-table tfoot td {
+        padding-top: 0 !important;
     }
 
     .main-content { margin: 0 !important; padding: 0 !important; }
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleHeader = document.getElementById('toggleHeader');
+    const toggleFooter = document.getElementById('toggleFooter');
+    const reportWrapper = document.getElementById('reportWrapper');
+    const originalTitle = document.title;
+
+    function updateHeaderView() {
+        if (toggleHeader.checked) {
+            reportWrapper.classList.remove('hide-header');
+        } else {
+            reportWrapper.classList.add('hide-header');
+        }
+    }
+
+    function updateFooterView() {
+        if (toggleFooter.checked) {
+            reportWrapper.classList.remove('hide-footer');
+        } else {
+            reportWrapper.classList.add('hide-footer');
+        }
+    }
+
+    if (toggleHeader && reportWrapper) {
+        toggleHeader.addEventListener('change', updateHeaderView);
+        // Initial setup in case of reload state persistence
+        updateHeaderView();
+    }
+
+    if (toggleFooter && reportWrapper) {
+        toggleFooter.addEventListener('change', updateFooterView);
+        // Initial setup in case of reload state persistence
+        updateFooterView();
+    }
+
+    // Dynamic page title clearing to avoid browser default header printing
+    window.onbeforeprint = function() {
+        if (toggleHeader && !toggleHeader.checked) {
+            document.title = "";
+        }
+    };
+
+    window.onafterprint = function() {
+        document.title = originalTitle;
+    };
+});
+</script>
 {% endblock %}

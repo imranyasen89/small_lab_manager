@@ -55,14 +55,14 @@
                         {% endif %}
                     </td>
                     <td style="text-align: right;">
-                        <a href="{{ url_for('patient_receipt', patient_id=patient.id) }}" class="btn btn-warning" title="View/Print Receipt" style="background-color: #f59e0b; color: white; padding: 0.75rem; font-size: 1rem;">
-                            <i class="fa-solid fa-receipt fa-lg"></i> <span style="margin-left: 0.25rem;">Receipt</span>
+                        <a href="{{ url_for('patient_receipt', patient_id=patient.id) }}" class="btn btn-warning" title="View/Print Receipt" style="background-color: #f59e0b; color: white; padding: 0.4rem 0.6rem; font-size: 0.85rem;">
+                            <i class="fa-solid fa-receipt"></i> <span style="margin-left: 0.25rem;">Receipt</span>
                         </a>
-                        <a href="{{ url_for('patient_results', patient_id=patient.id) }}" class="btn btn-primary" title="Enter Lab Results" style="padding: 0.75rem; font-size: 1rem;">
-                            <i class="fa-solid fa-file-medical fa-lg"></i> <span style="margin-left: 0.25rem;">Results</span>
+                        <a href="{{ url_for('patient_results', patient_id=patient.id) }}" class="btn btn-primary" title="Enter Lab Results" style="padding: 0.4rem 0.6rem; font-size: 0.85rem;">
+                            <i class="fa-solid fa-file-medical"></i> <span style="margin-left: 0.25rem;">Results</span>
                         </a>
-                        <a href="{{ url_for('patient_report', patient_id=patient.id) }}" class="btn btn-secondary" title="View/Print Report" style="padding: 0.75rem; font-size: 1rem;">
-                            <i class="fa-solid fa-print fa-lg"></i> <span style="margin-left: 0.25rem;">Print</span>
+                        <a href="{{ url_for('patient_report', patient_id=patient.id) }}" class="btn btn-secondary" title="View/Print Report" style="padding: 0.4rem 0.6rem; font-size: 0.85rem;">
+                            <i class="fa-solid fa-print"></i> <span style="margin-left: 0.25rem;">Print</span>
                         </a>
                     </td>
                 </tr>

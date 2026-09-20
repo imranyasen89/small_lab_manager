@@ -1,5 +1,29 @@
+# Virtual environment
+.venv/
 venv/
+ENV/
+
+# Python cache
 __pycache__/
-.idea/
-instance/
+*.py[cod]
+*$py.class
 *.pyc
+
+# Local SQLite databases (no longer used)
+instance/
+*.db
+*.sqlite3
+
+# Environment variables & Firebase credentials
+.env
+.env.*
+serviceAccountKey.json
+firebase_credentials.json
+*firebase-adminsdk*.json
+
+# IDE
+.idea/
+.vscode/
+
+# Vercel
+.vercel/

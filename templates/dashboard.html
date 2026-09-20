@@ -8,7 +8,7 @@
     </div>
     <div>
         <form method="GET" action="{{ url_for('dashboard') }}"
-              style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; background: var(--secondary-color); padding: 0.75rem 1rem; border-radius: var(--border-radius); border: 1px solid var(--border-color);">
+              style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap; background: var(--secondary-color); padding: 0.75rem 1rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); white-space: nowrap;">
             <i class="fa-solid fa-calendar-days" style="color: var(--primary-color);"></i>
             <label for="date_from" style="color: var(--text-dark); font-weight: 600; font-size: 0.875rem;">From:</label>
             <input type="date" id="date_from" name="date_from" value="{{ date_from }}"
@@ -52,7 +52,7 @@
         </div>
     </div>
 
-    {% if current_user.role == 'Admin' %}
+    {% if current_user.role in ['Admin', 'SuperAdmin'] %}
     <div class="stat-card">
         <div class="stat-icon success">
             <i class="fa-solid fa-money-bill-wave"></i>

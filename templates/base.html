@@ -28,7 +28,7 @@
                     Dashboard
                 </a>
                 
-                {% if current_user.role in ['Admin', 'Receptionist'] %}
+                {% if current_user.role in ['Admin', 'SuperAdmin', 'Receptionist'] %}
                 <a href="{{ url_for('patient_new') }}" class="nav-item {% if 'patient_new' in request.endpoint %}active{% endif %}">
                     <i class="fa-solid fa-user-plus"></i>
                     New Patient
@@ -40,14 +40,14 @@
                     Patients List
                 </a>
                 
-                {% if current_user.role in ['Admin', 'Lab Technician', 'Technologist', 'Pathologist'] %}
+                {% if current_user.role in ['Admin', 'SuperAdmin', 'Lab Technician', 'Technologist', 'Pathologist'] %}
                 <a href="{{ url_for('results_list') }}" class="nav-item {% if 'patient_results' in request.endpoint %}active{% endif %}">
                     <i class="fa-solid fa-file-medical"></i>
                     Enter Results
                 </a>
                 {% endif %}
 
-                {% if current_user.role == 'Admin' %}
+                {% if current_user.role in ['Admin', 'SuperAdmin'] %}
                 <div style="border-top: 1px solid var(--border-color); margin: 1rem 0;"></div>
                 <div style="padding: 0 1.5rem; font-size: 0.75rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.5rem;">Reports</div>
                 <a href="{{ url_for('cash_summary') }}" class="nav-item {% if 'cash_summary' in request.endpoint %}active{% endif %}">
